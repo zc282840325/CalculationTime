@@ -96,8 +96,8 @@ namespace CalculationTime
         public void Start()
         {
             //数据库链接地址
-            string dlweather = "Data Source=129.211.11.64;Initial Catalog=dlweather;Persist Security Info=True;User ID=sa;Password=4rfv%TGB";
-            string warninfoDlNew = "Data Source=129.211.11.64;Initial Catalog=warninfoDlNew;Persist Security Info=True;User ID=sa;Password=4rfv%TGB";
+            string dlweather = "";
+            string warninfoDlNew = "";
             //声明对象
             string starttime = string.Empty;
             string endtime = string.Empty;
