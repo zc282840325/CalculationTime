@@ -41,15 +41,17 @@ namespace CalculationTime
             LogHelper.Info("计算时效值");
             Init();
 
-            Thread thread = new Thread(Start);
-            thread.Start();
+            var task = new Task(()=> {
+                Start();
+            });
+            task.Start();
         }
         //统计总和
         private void Button2_Click(object sender, EventArgs e)
         {
             LogHelper.Info("统计总和");
             msg += "\r\n统计总和\r\n";
-            msg += "时间：\t\t\t\t名称：\t\t\t\t总数量：\t\t\t\t总时效值(单位秒)：\r\n";
+            msg += "时间：\t\t\t\t名称：\t\t\t\t总数量：\t\t\t\t总时效值：\r\n";
             dataGridView2.AutoGenerateColumns = false;
             //统计总和
             List<Entity> listname = list.Distinct(new Compare()).ToList();
@@ -61,9 +63,10 @@ namespace CalculationTime
                 {
                     listname[i].Count += entities[j].Count;
                     listname[i].Totalvalue += entities[j].Totalvalue;
+                    listname[i].Sum = formatTime(listname[i].Totalvalue);
                 }
                 listname[i].Date = DateTime.Parse(dateTimePicker1.Text).AddMonths(-1);
-                msg += listname[i].Date+ "\t\t" + listname[i].Yjfb+ "\t\t\t\t" + listname[i].Count+ "\t\t\t\t" + listname[i].Totalvalue+"\r\n";
+                msg += listname[i].Date.ToString("yyyy-MM") + "\t\t\t\t" + listname[i].Yjfb+ "\t\t\t\t" + listname[i].Count+ "\t\t\t\t" + listname[i].Sum+"\r\n";
             }
             //绑定数据
             dataGridView2.DataSource = listname;
@@ -112,7 +115,7 @@ namespace CalculationTime
             //计算上一个月的月初和月末
             GetSartAndEnd(ref starttime, ref endtime, dtime, ref count);
             //查询值班人员记录
-            string sql = string.Format("select date,yjfb from duty where date BETWEEN '{0}' and '{1}'", starttime, endtime);
+            string sql = string.Format("select (Select CONVERT(varchar(100), date, 23)) as date,yjfb from duty where date BETWEEN '{0}' and '{1}'", starttime, endtime);
             //获取数据
             DataTable dt = new DataTable();
             try
@@ -134,6 +137,7 @@ namespace CalculationTime
                 {
                     Entity entity = list[i];
                     CalculationTimes(entity, warninfoDlNew_sql);
+                  
                 }
                 //绑定数据
                 this.Invoke(new EventHandler(delegate
@@ -203,7 +207,15 @@ namespace CalculationTime
                     {
                         DataColumn dColumn = listColumns.Find(name => name.ToString().ToUpper() == propertyInfo.Name.ToUpper());  //查看是否存在对应的列名
                         if (dColumn != null)
-                            propertyInfo.SetValue(t, dr[propertyInfo.Name], null);  //赋值
+                            if (propertyInfo.Name=="Date")
+                            {
+                                propertyInfo.SetValue(t, DateTime.Parse(dr[propertyInfo.Name].ToString()), null);  //赋值
+                            }
+                            else
+                            {
+                                propertyInfo.SetValue(t, dr[propertyInfo.Name], null);  //赋值
+                            }
+                           
                     }
                     catch (Exception ex)
                     {
@@ -251,13 +263,13 @@ namespace CalculationTime
                 LogHelper.Error(ex.Message);
             }
             entity.Count = dt2.Rows.Count;
-            double df = 0.0;
+            int df = 0;
             for (int j = 0; j < dt2.Rows.Count; j++)
             {
                 DateTime t1 = DateTime.Parse(dt2.Rows[j]["updated"].ToString());
                 DateTime t2 = DateTime.Parse(dt2.Rows[j]["created"].ToString());
                 TimeSpan ts = t1 - t2;
-                df += ts.TotalSeconds;
+                df +=Convert.ToInt32(ts.TotalSeconds);
             }
             if (dt2.Rows.Count > 0)
             {
@@ -268,9 +280,10 @@ namespace CalculationTime
             else
             {
                 entity.shixiao = "0";
-                entity.Totalvalue = 0.0;
+                entity.Totalvalue = 0;
             }
-            msg += entity.Date + "\t\t" + entity.Yjfb + "\t\t\t\t" + entity.Count + "\t\t\t\t" + entity.shixiao + "\t\t\t\t\t" + entity.Totalvalue + "\r\n";
+            entity.Sum = formatTime(entity.Totalvalue);
+            msg += entity.Date.ToString().Replace("上午 12:00", "") + "\t\t\t" + entity.Yjfb + "\t\t\t\t" + entity.Count + "\t\t\t\t" + entity.shixiao + "\t\t\t\t\t" + entity.Sum + "\r\n";
         }
         #endregion
 
@@ -295,7 +308,8 @@ namespace CalculationTime
             public DateTime Date { get; set; }//值班时间
             public int Count { get; set; }//1天复合条数
             public string shixiao { get; set; }//时效值(AVG)
-            public double Totalvalue { get; set; }//当前日期时效总值
+            public int Totalvalue { get; set; }//当前日期时效总值
+            public string Sum { get; set; }//时效总值转化为时分秒
         }
 
 
